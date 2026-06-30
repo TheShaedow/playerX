@@ -3,20 +3,21 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Audio Player – Speed, Pitch & A–B Loop</title>
+  <title>Audio Übungsplayer</title>
   <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
   <style>
     :root {
       --bg: #0b1020;
       --panel: #131a2e;
-      --panel-2: #19233d;
+      --panel2: #19233d;
       --text: #f6f7fb;
       --muted: #aeb7d0;
-      --line: rgba(255,255,255,.12);
+      --line: rgba(255,255,255,.13);
       --accent: #7dd3fc;
       --danger: #fb7185;
       --ok: #86efac;
-      --shadow: 0 18px 55px rgba(0,0,0,.35);
+      --markerA: #86efac;
+      --markerB: #fb7185;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
     }
 
@@ -25,49 +26,54 @@
     body {
       margin: 0;
       min-height: 100vh;
-      background:
-        radial-gradient(circle at top left, rgba(125,211,252,.20), transparent 38rem),
-        radial-gradient(circle at bottom right, rgba(192,132,252,.14), transparent 34rem),
-        var(--bg);
       color: var(--text);
-      display: grid;
-      place-items: center;
-      padding: clamp(16px, 3vw, 40px);
+      background:
+        radial-gradient(circle at top left, rgba(125,211,252,.20), transparent 34rem),
+        radial-gradient(circle at bottom right, rgba(192,132,252,.15), transparent 34rem),
+        var(--bg);
+      padding: clamp(14px, 3vw, 34px);
     }
 
     .app {
-      width: min(980px, 100%);
-      background: rgba(19, 26, 46, .86);
+      width: min(1120px, 100%);
+      margin: auto;
+      background: rgba(19,26,46,.88);
       border: 1px solid var(--line);
       border-radius: 28px;
-      box-shadow: var(--shadow);
       overflow: hidden;
+      box-shadow: 0 20px 60px rgba(0,0,0,.38);
       backdrop-filter: blur(16px);
     }
 
     header {
       padding: clamp(20px, 4vw, 34px);
       border-bottom: 1px solid var(--line);
-      background: linear-gradient(135deg, rgba(125,211,252,.10), rgba(255,255,255,.03));
+      background: linear-gradient(135deg, rgba(125,211,252,.11), rgba(255,255,255,.03));
     }
 
     h1 {
       margin: 0 0 8px;
-      font-size: clamp(1.5rem, 4vw, 2.4rem);
-      letter-spacing: -.04em;
+      font-size: clamp(1.55rem, 4vw, 2.6rem);
+      letter-spacing: -.045em;
     }
 
     .subtitle {
       margin: 0;
       color: var(--muted);
       line-height: 1.45;
-      max-width: 68ch;
     }
 
     main {
-      padding: clamp(18px, 4vw, 34px);
+      padding: clamp(16px, 4vw, 34px);
       display: grid;
       gap: 18px;
+    }
+
+    .card {
+      background: rgba(25,35,61,.82);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
     }
 
     .grid {
@@ -76,15 +82,8 @@
       gap: 18px;
     }
 
-    @media (max-width: 760px) {
+    @media (max-width: 820px) {
       .grid { grid-template-columns: 1fr; }
-    }
-
-    .card {
-      background: rgba(25, 35, 61, .8);
-      border: 1px solid var(--line);
-      border-radius: 22px;
-      padding: 18px;
     }
 
     label {
@@ -94,38 +93,13 @@
       margin-bottom: 8px;
     }
 
-    input[type="url"],
-    input[type="text"],
-    input[type="number"] {
-      width: 100%;
-      border: 1px solid var(--line);
-      background: rgba(0,0,0,.20);
-      color: var(--text);
-      border-radius: 14px;
-      padding: 12px 13px;
-      outline: none;
-      font: inherit;
-    }
-
-    input[type="file"] {
-      width: 100%;
-      color: var(--muted);
-    }
-
-    .row {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
     button {
       border: 0;
       border-radius: 999px;
       padding: 12px 16px;
       color: #06111f;
       background: var(--accent);
-      font-weight: 750;
+      font-weight: 800;
       cursor: pointer;
       transition: transform .12s ease, opacity .12s ease;
     }
@@ -150,114 +124,157 @@
       transform: translateY(1px) scale(.99);
     }
 
-    .transport {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 14px;
-      flex-wrap: wrap;
-    }
-
-    .time {
-      font-variant-numeric: tabular-nums;
-      color: var(--muted);
-      min-width: 150px;
-      text-align: right;
-    }
-
-    .progress {
-      width: 100%;
-      accent-color: var(--accent);
-    }
-
-    .control {
-      display: grid;
-      gap: 8px;
-      margin: 12px 0;
-    }
-
     input[type="range"] {
       width: 100%;
       accent-color: var(--accent);
     }
 
+    input[type="number"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.20);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 11px 12px;
+      font: inherit;
+      outline: none;
+    }
+
+    .row {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .between {
+      justify-content: space-between;
+    }
+
+    .muted, .status {
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .ok { color: var(--ok); }
+
+    .time {
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+      min-width: 160px;
+      text-align: right;
+    }
+
+    .wave-wrap {
+      position: relative;
+      border-radius: 18px;
+      overflow: hidden;
+      background: rgba(0,0,0,.22);
+      border: 1px solid var(--line);
+      touch-action: none;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 230px;
+      cursor: crosshair;
+    }
+
+    @media (max-width: 640px) {
+      canvas { height: 180px; }
+    }
+
+    .hint {
+      font-size: .9rem;
+      color: var(--muted);
+      margin-top: 10px;
+    }
+
+    .control {
+      margin: 10px 0 16px;
+    }
+
     .value {
       color: var(--text);
-      font-weight: 700;
+      font-weight: 800;
     }
 
     .loop-fields {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 12px;
-    }
-
-    .status {
-      color: var(--muted);
-      line-height: 1.45;
-      min-height: 1.4em;
+      margin: 12px 0;
     }
 
     .pill {
       display: inline-flex;
       align-items: center;
-      gap: 6px;
-      padding: 6px 10px;
+      gap: 7px;
+      padding: 7px 11px;
       border-radius: 999px;
       background: rgba(255,255,255,.08);
       color: var(--muted);
-      font-size: .86rem;
+      font-size: .88rem;
     }
 
-    .ok { color: var(--ok); }
-    .muted { color: var(--muted); }
-    code {
-      background: rgba(255,255,255,.08);
-      padding: .12rem .35rem;
-      border-radius: .4rem;
+    kbd {
+      background: rgba(255,255,255,.12);
+      border: 1px solid var(--line);
+      border-bottom-width: 2px;
+      border-radius: 7px;
+      padding: 2px 6px;
+      color: var(--text);
+      font-size: .85em;
     }
   </style>
 </head>
 <body>
   <div class="app">
     <header>
-      <h1 id="title">Audio Player</h1>
+      <h1>Audio Übungsplayer</h1>
       <p class="subtitle">
-        Responsiver Player für GitHub Pages: Audio per URL-Parameter, Upload oder Direktlink laden,
-        Geschwindigkeit ändern, Tonhöhe verschieben und A–B-Loop für Teilbereiche setzen.
+        Lokaler Audio-Player mit Speed, Pitch, A–B-Loop, Wellenform, Zoom, Marker-Drag und Tastenkürzeln.
       </p>
     </header>
 
     <main>
       <section class="card">
-        <label for="audioUrl">Audio-URL</label>
+        <label>Audio laden</label>
         <div class="row">
-          <input id="audioUrl" type="url" placeholder="https://example.com/audio.mp3" />
-          <button id="loadUrlBtn">Laden</button>
-        </div>
-        <p class="status">
-          Linkformat: <code>?audio=https%3A%2F%2Fexample.com%2Ffile.mp3&title=Mein%20Audio</code>
-        </p>
-        <label>Oder Audio direkt im Browser laden</label>
-        <div class="row">
-          <button id="loadFileBtn" type="button">Load Audio</button>
+          <button id="loadFileBtn" type="button">📂 Load Audio</button>
           <span id="fileName" class="muted">Keine Datei ausgewählt</span>
         </div>
         <input id="fileInput" type="file" accept="audio/*" hidden />
+        <p id="status" class="status">Lade eine MP3-, WAV-, OGG-, FLAC- oder M4A-Datei direkt von deinem Computer.</p>
       </section>
 
       <section class="card">
-        <div class="transport">
+        <div class="row between">
           <div class="row">
             <button id="playBtn" disabled>Play</button>
+            <button id="pauseBtn" class="secondary" disabled>Pause</button>
             <button id="stopBtn" class="secondary" disabled>Stop</button>
             <button id="backBtn" class="secondary" disabled>−5s</button>
             <button id="forwardBtn" class="secondary" disabled>+5s</button>
           </div>
-          <div class="time"><span id="pos">0:00</span> / <span id="dur">0:00</span></div>
+          <div class="time"><span id="pos">0:00.00</span> / <span id="dur">0:00.00</span></div>
         </div>
-        <input id="seek" class="progress" type="range" min="0" max="0" step="0.01" value="0" disabled />
-        <p id="status" class="status">Noch keine Audiodatei geladen.</p>
+
+        <div class="wave-wrap" style="margin-top:14px;">
+          <canvas id="wave"></canvas>
+        </div>
+
+        <div class="control">
+          <label for="zoom">Zoom: <span id="zoomVal" class="value">1.0×</span></label>
+          <input id="zoom" type="range" min="1" max="20" step="0.1" value="1" disabled />
+        </div>
+
+        <p class="hint">
+          Klicken = ab dieser Stelle abspielen. Marker A/B ziehen. <kbd>Leertaste</kbd> Play/Pause,
+          <kbd>A</kbd> Loop-Start, <kbd>B</kbd> Loop-Ende, <kbd>L</kbd> Loop an/aus,
+          <kbd>←</kbd>/<kbd>→</kbd> springen.
+        </p>
       </section>
 
       <section class="grid">
@@ -270,13 +287,11 @@
             <label for="pitch">Tonhöhe: <span id="pitchVal" class="value">0 st</span></label>
             <input id="pitch" type="range" min="-12" max="12" step="1" value="0" />
           </div>
-          <p class="status">
-            Tonhöhe wird in Halbtönen verschoben. Speed bleibt separat steuerbar.
-          </p>
+          <p class="status">Pitch wird in Halbtönen verschoben, unabhängig vom Speed.</p>
         </div>
 
         <div class="card">
-          <div class="row" style="justify-content: space-between;">
+          <div class="row between">
             <span class="pill">A–B Loop</span>
             <button id="loopToggle" class="secondary" disabled>Loop aus</button>
           </div>
@@ -290,7 +305,7 @@
               <input id="loopEnd" type="number" min="0" step="0.01" value="0" />
             </div>
           </div>
-          <div class="row" style="margin-top: 12px;">
+          <div class="row">
             <button id="setA" class="secondary" disabled>A = jetzt</button>
             <button id="setB" class="secondary" disabled>B = jetzt</button>
             <button id="clearLoop" class="danger" disabled>Reset</button>
@@ -302,38 +317,77 @@
   </div>
 
   <script>
-    const $ = (id) => document.getElementById(id);
+    const $ = id => document.getElementById(id);
 
     const state = {
       player: null,
       pitchShift: null,
-      sourceUrl: "",
       duration: 0,
+      fileKey: "",
+      peaks: [],
+      audioBuffer: null,
       startedAt: 0,
       offsetAtStart: 0,
       isPlaying: false,
+      loopEnabled: false,
       raf: null,
-      loopEnabled: false
+      drag: null,
+      viewStart: 0
     };
 
-    const controls = [
-      "playBtn", "stopBtn", "backBtn", "forwardBtn", "seek",
-      "loopToggle", "setA", "setB", "clearLoop"
-    ].map($);
+    const controlIds = [
+      "playBtn", "pauseBtn", "stopBtn", "backBtn", "forwardBtn", "loopToggle",
+      "setA", "setB", "clearLoop", "zoom"
+    ];
 
-    function fmt(seconds) {
-      seconds = Math.max(0, Number(seconds) || 0);
-      const m = Math.floor(seconds / 60);
-      const s = Math.floor(seconds % 60).toString().padStart(2, "0");
-      return `${m}:${s}`;
+    const canvas = $("wave");
+    const ctx = canvas.getContext("2d");
+
+    function fmt(s) {
+      s = Math.max(0, Number(s) || 0);
+      const m = Math.floor(s / 60);
+      const sec = Math.floor(s % 60).toString().padStart(2, "0");
+      const cs = Math.floor((s % 1) * 100).toString().padStart(2, "0");
+      return `${m}:${sec}.${cs}`;
     }
 
-    function setStatus(text, ok = false) {
+    function enableControls(on) {
+      controlIds.forEach(id => $(id).disabled = !on);
+    }
+
+    function status(text, ok=false) {
       $("status").innerHTML = ok ? `<span class="ok">${text}</span>` : text;
     }
 
-    function enableControls(enabled) {
-      controls.forEach(el => el.disabled = !enabled);
+    function storageKey() {
+      return state.fileKey ? `audio-practice-loop:${state.fileKey}` : "";
+    }
+
+    function saveLoop() {
+      const key = storageKey();
+      if (!key) return;
+      localStorage.setItem(key, JSON.stringify({
+        a: Number($("loopStart").value) || 0,
+        b: Number($("loopEnd").value) || 0,
+        loop: state.loopEnabled,
+        speed: Number($("speed").value),
+        pitch: Number($("pitch").value)
+      }));
+    }
+
+    function restoreLoop() {
+      const key = storageKey();
+      if (!key) return false;
+      try {
+        const data = JSON.parse(localStorage.getItem(key));
+        if (!data) return false;
+        $("loopStart").value = Math.max(0, Math.min(state.duration, data.a || 0)).toFixed(2);
+        $("loopEnd").value = Math.max(0, Math.min(state.duration, data.b || state.duration)).toFixed(2);
+        state.loopEnabled = !!data.loop;
+        $("speed").value = data.speed || 1;
+        $("pitch").value = data.pitch || 0;
+        return true;
+      } catch { return false; }
     }
 
     function loopBounds() {
@@ -346,7 +400,6 @@
     function wrapIntoLoopPosition(pos) {
       const loop = loopBounds();
       if (!loop.valid || loop.length <= 0) return pos;
-
       if (pos < loop.a) return loop.a;
       const wrapped = ((pos - loop.a) % loop.length + loop.length) % loop.length;
       return loop.a + wrapped;
@@ -358,46 +411,172 @@
       return wrapIntoLoopPosition(raw);
     }
 
-    function setTransportUI(pos) {
+    function visibleDuration() {
+      return state.duration / Number($("zoom").value || 1);
+    }
+
+    function clampView() {
+      const vd = visibleDuration();
+      state.viewStart = Math.max(0, Math.min(state.viewStart, Math.max(0, state.duration - vd)));
+    }
+
+    function timeToX(t) {
+      const vd = visibleDuration();
+      return ((t - state.viewStart) / vd) * canvas.clientWidth;
+    }
+
+    function xToTime(x) {
+      const rect = canvas.getBoundingClientRect();
+      const px = Math.max(0, Math.min(rect.width, x - rect.left));
+      return state.viewStart + (px / rect.width) * visibleDuration();
+    }
+
+    function resizeCanvas() {
+      const dpr = window.devicePixelRatio || 1;
+      const rect = canvas.getBoundingClientRect();
+      canvas.width = Math.max(1, Math.floor(rect.width * dpr));
+      canvas.height = Math.max(1, Math.floor(rect.height * dpr));
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      draw();
+    }
+
+    function makePeaks(buffer, count=6000) {
+      const data = buffer.getChannelData(0);
+      const block = Math.max(1, Math.floor(data.length / count));
+      const peaks = [];
+      for (let i = 0; i < count; i++) {
+        let min = 1, max = -1;
+        const start = i * block;
+        const end = Math.min(data.length, start + block);
+        for (let j = start; j < end; j++) {
+          const v = data[j];
+          if (v < min) min = v;
+          if (v > max) max = v;
+        }
+        peaks.push([min, max]);
+      }
+      return peaks;
+    }
+
+    function draw() {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      ctx.clearRect(0, 0, w, h);
+      ctx.fillStyle = "rgba(0,0,0,.18)";
+      ctx.fillRect(0, 0, w, h);
+
+      if (!state.duration || !state.peaks.length) {
+        ctx.fillStyle = "rgba(255,255,255,.35)";
+        ctx.textAlign = "center";
+        ctx.fillText("Noch keine Wellenform geladen", w/2, h/2);
+        return;
+      }
+
+      const vd = visibleDuration();
+      const startRatio = state.viewStart / state.duration;
+      const endRatio = (state.viewStart + vd) / state.duration;
+      const startIdx = Math.floor(startRatio * state.peaks.length);
+      const endIdx = Math.ceil(endRatio * state.peaks.length);
+      const visiblePeaks = state.peaks.slice(startIdx, endIdx);
+      const mid = h / 2;
+
+      ctx.strokeStyle = "rgba(125,211,252,.88)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+
+      for (let x = 0; x < w; x++) {
+        const idx = Math.floor((x / w) * visiblePeaks.length);
+        const p = visiblePeaks[idx] || [0, 0];
+        const y1 = mid + p[0] * mid * .88;
+        const y2 = mid + p[1] * mid * .88;
+        ctx.moveTo(x + .5, y1);
+        ctx.lineTo(x + .5, y2);
+      }
+      ctx.stroke();
+
+      const a = Number($("loopStart").value) || 0;
+      const b = Number($("loopEnd").value) || 0;
+      const ax = timeToX(a);
+      const bx = timeToX(b);
+
+      if (b > a) {
+        ctx.fillStyle = "rgba(134,239,172,.10)";
+        ctx.fillRect(Math.max(0, ax), 0, Math.min(w, bx) - Math.max(0, ax), h);
+      }
+
+      drawMarker(ax, "A", getComputedStyle(document.documentElement).getPropertyValue("--markerA").trim());
+      drawMarker(bx, "B", getComputedStyle(document.documentElement).getPropertyValue("--markerB").trim());
+
+      const px = timeToX(currentPosition());
+      ctx.strokeStyle = "white";
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(px, 0);
+      ctx.lineTo(px, h);
+      ctx.stroke();
+    }
+
+    function drawMarker(x, label, color) {
+      const w = canvas.clientWidth;
+      const h = canvas.clientHeight;
+      if (x < -20 || x > w + 20) return;
+      ctx.strokeStyle = color;
+      ctx.fillStyle = color;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, h);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(x, 15, 11, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#06111f";
+      ctx.font = "bold 12px system-ui";
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(label, x, 15);
+    }
+
+    function updateTransportUI(pos) {
       $("pos").textContent = fmt(pos);
       $("dur").textContent = fmt(state.duration);
-      $("seek").value = Math.min(pos, state.duration || 0);
+      draw();
+    }
+
+    function applyFX() {
+      if (state.player) state.player.playbackRate = Number($("speed").value);
+      if (state.pitchShift) state.pitchShift.pitch = Number($("pitch").value);
+      $("speedVal").textContent = `${Number($("speed").value).toFixed(2)}×`;
+      $("pitchVal").textContent = `${$("pitch").value} st`;
+      saveLoop();
     }
 
     function updateLoop() {
       if (!state.player) return;
-      const a = Number($("loopStart").value) || 0;
-      const b = Number($("loopEnd").value) || 0;
-      const valid = b > a && b <= state.duration;
-
-      state.player.loop = state.loopEnabled && valid;
-      if (valid) {
-        state.player.loopStart = a;
-        state.player.loopEnd = b;
-        $("loopInfo").textContent = `Loop-Bereich: ${fmt(a)} bis ${fmt(b)}`;
+      const loop = loopBounds();
+      state.player.loop = loop.valid;
+      if (loop.valid) {
+        state.player.loopStart = loop.a;
+        state.player.loopEnd = loop.b;
+        $("loopInfo").textContent = `Loop-Bereich: ${fmt(loop.a)} bis ${fmt(loop.b)}`;
       } else {
         state.player.loop = false;
         $("loopInfo").textContent = "Loop-Bereich ungültig oder noch nicht gesetzt.";
       }
+      $("loopToggle").textContent = state.loopEnabled ? "Loop an" : "Loop aus";
+      saveLoop();
+      draw();
     }
 
-    function applyFX() {
-      if (!state.player || !state.pitchShift) return;
-      state.player.playbackRate = Number($("speed").value);
-      state.pitchShift.pitch = Number($("pitch").value);
-      $("speedVal").textContent = `${Number($("speed").value).toFixed(2)}×`;
-      $("pitchVal").textContent = `${$("pitch").value} st`;
-    }
-
-    async function stopPlayback(reset = false) {
+    async function stopPlayback(reset=false) {
       if (state.player) {
-        try { state.player.stop(); } catch (e) {}
+        try { state.player.stop(); } catch(e) {}
       }
       state.isPlaying = false;
       cancelAnimationFrame(state.raf);
       if (reset) state.offsetAtStart = 0;
-      setTransportUI(state.offsetAtStart);
       $("playBtn").textContent = "Play";
+      updateTransportUI(state.offsetAtStart);
     }
 
     async function playFrom(offset) {
@@ -406,9 +585,8 @@
       await stopPlayback(false);
 
       offset = Math.max(0, Math.min(offset, state.duration));
-      const a = Number($("loopStart").value) || 0;
-      const b = Number($("loopEnd").value) || 0;
-      if (state.loopEnabled && b > a && (offset < a || offset >= b)) offset = a;
+      const loop = loopBounds();
+      if (loop.valid && (offset < loop.a || offset >= loop.b)) offset = loop.a;
 
       applyFX();
       updateLoop();
@@ -423,98 +601,96 @@
 
     function tick() {
       if (!state.player) return;
-
-      const rawPos = state.isPlaying
-        ? state.offsetAtStart + (Tone.now() - state.startedAt) * Number($("speed").value)
-        : state.offsetAtStart;
-
-      if (!state.loopEnabled && rawPos >= state.duration) {
+      const raw = state.offsetAtStart + (Tone.now() - state.startedAt) * Number($("speed").value);
+      if (!state.loopEnabled && raw >= state.duration) {
         stopPlayback(true);
         return;
       }
+      const pos = wrapIntoLoopPosition(raw);
+      updateTransportUI(pos);
 
-      setTransportUI(wrapIntoLoopPosition(rawPos));
+      const vd = visibleDuration();
+      if (Number($("zoom").value) > 1 && (pos < state.viewStart || pos > state.viewStart + vd * .92)) {
+        state.viewStart = Math.max(0, pos - vd * .35);
+        clampView();
+      }
+
       state.raf = requestAnimationFrame(tick);
     }
 
-    async function loadAudio(url, label = "") {
+    async function loadAudioFile(file) {
       await stopPlayback(true);
       enableControls(false);
-      setStatus("Audio wird geladen …");
+      status("Audio wird geladen …");
+      $("fileName").textContent = file.name;
 
       if (state.player) {
         state.player.dispose();
         state.pitchShift.dispose();
       }
 
+      const arrayBuffer = await file.arrayBuffer();
+      const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      const decoded = await audioCtx.decodeAudioData(arrayBuffer.slice(0));
+      state.audioBuffer = decoded;
+      state.peaks = makePeaks(decoded);
+      state.duration = decoded.duration;
+      state.fileKey = `${file.name}:${file.size}:${file.lastModified}`;
+      state.viewStart = 0;
+
+      const url = URL.createObjectURL(file);
       state.pitchShift = new Tone.PitchShift({ pitch: Number($("pitch").value), windowSize: 0.08 }).toDestination();
       state.player = new Tone.Player({
         url,
         autostart: false,
         onload: () => {
-          state.duration = state.player.buffer.duration;
-          state.sourceUrl = url;
-          $("seek").max = state.duration;
+          $("loopStart").value = "0.00";
           $("loopEnd").value = state.duration.toFixed(2);
-          $("title").textContent = label || new URLSearchParams(location.search).get("title") || "Audio Player";
-          setTransportUI(0);
+          restoreLoop();
+          $("zoom").value = 1;
+          $("zoomVal").textContent = "1.0×";
           enableControls(true);
           applyFX();
           updateLoop();
-          setStatus("Audio geladen. Bereit zum Abspielen.", true);
+          updateTransportUI(0);
+          status("Audio geladen. Marker A/B kannst du direkt in der Wellenform ziehen.", true);
         },
-        onerror: () => {
-          setStatus("Audio konnte nicht geladen werden. Prüfe HTTPS, CORS und die Datei-URL.");
-          enableControls(false);
-        }
+        onerror: () => status("Audio konnte nicht geladen werden.")
       }).connect(state.pitchShift);
     }
 
-    $("loadUrlBtn").addEventListener("click", () => {
-      const url = $("audioUrl").value.trim();
-      if (url) loadAudio(url);
+    $("loadFileBtn").addEventListener("click", () => $("fileInput").click());
+
+    $("fileInput").addEventListener("change", e => {
+      const file = e.target.files[0];
+      if (file) loadAudioFile(file);
     });
 
-    $("loadFileBtn").addEventListener("click", () => {
-      $("fileInput").click();
-    });
-
-    $("fileInput").addEventListener("change", (event) => {
-      const file = event.target.files[0];
-      if (!file) return;
-      $("fileName").textContent = file.name;
-      const url = URL.createObjectURL(file);
-      loadAudio(url, file.name);
-    });
-
-    $("playBtn").addEventListener("click", async () => {
+    $("playBtn").addEventListener("click", () => {
       if (state.isPlaying) {
-        const pos = currentPosition();
-        await stopPlayback(false);
-        state.offsetAtStart = pos;
+        state.offsetAtStart = currentPosition();
+        stopPlayback(false);
       } else {
         playFrom(state.offsetAtStart);
       }
     });
 
-    $("stopBtn").addEventListener("click", () => stopPlayback(true));
 
+    $("pauseBtn").addEventListener("click", async () => {
+      if (!state.player || !state.isPlaying) return;
+      state.offsetAtStart = currentPosition();
+      await stopPlayback(false);
+    });
+
+    $("stopBtn").addEventListener("click", () => stopPlayback(true));
     $("backBtn").addEventListener("click", () => playFrom(currentPosition() - 5));
     $("forwardBtn").addEventListener("click", () => playFrom(currentPosition() + 5));
 
-    $("seek").addEventListener("input", async () => {
-      const pos = Number($("seek").value);
-      state.offsetAtStart = pos;
-      setTransportUI(pos);
-      if (state.isPlaying) await playFrom(pos);
-    });
-
     $("speed").addEventListener("input", () => {
-      const pos = currentPosition();
-      state.offsetAtStart = pos;
+      state.offsetAtStart = currentPosition();
       state.startedAt = Tone.now();
       applyFX();
-      setTransportUI(pos);
+      updateTransportUI(state.offsetAtStart);
     });
 
     $("pitch").addEventListener("input", applyFX);
@@ -534,27 +710,103 @@
 
     $("clearLoop").addEventListener("click", () => {
       state.loopEnabled = false;
-      $("loopStart").value = "0";
+      $("loopStart").value = "0.00";
       $("loopEnd").value = state.duration.toFixed(2);
-      $("loopToggle").textContent = "Loop aus";
       updateLoop();
     });
 
     $("loopToggle").addEventListener("click", () => {
       state.loopEnabled = !state.loopEnabled;
-      $("loopToggle").textContent = state.loopEnabled ? "Loop an" : "Loop aus";
       updateLoop();
       if (state.isPlaying) playFrom(currentPosition());
     });
 
-    const params = new URLSearchParams(location.search);
-    const audioParam = params.get("audio");
-    const titleParam = params.get("title");
-    if (titleParam) $("title").textContent = titleParam;
-    if (audioParam) {
-      $("audioUrl").value = audioParam;
-      loadAudio(audioParam, titleParam || "");
+    $("zoom").addEventListener("input", () => {
+      $("zoomVal").textContent = `${Number($("zoom").value).toFixed(1)}×`;
+      const pos = currentPosition();
+      state.viewStart = Math.max(0, pos - visibleDuration() / 2);
+      clampView();
+      draw();
+    });
+
+    function nearestMarker(t) {
+      const a = Number($("loopStart").value) || 0;
+      const b = Number($("loopEnd").value) || 0;
+      const threshold = visibleDuration() * 0.025;
+      if (Math.abs(t - a) < threshold) return "A";
+      if (Math.abs(t - b) < threshold) return "B";
+      return null;
     }
+
+    canvas.addEventListener("pointerdown", e => {
+      if (!state.duration) return;
+      canvas.setPointerCapture(e.pointerId);
+      const t = xToTime(e.clientX);
+      const marker = nearestMarker(t);
+      if (marker) {
+        state.drag = marker;
+      } else {
+        state.offsetAtStart = Math.max(0, Math.min(state.duration, t));
+        if (state.isPlaying) playFrom(state.offsetAtStart);
+        else updateTransportUI(state.offsetAtStart);
+      }
+    });
+
+    canvas.addEventListener("pointermove", e => {
+      if (!state.duration || !state.drag) return;
+      let t = Math.max(0, Math.min(state.duration, xToTime(e.clientX)));
+      const a = Number($("loopStart").value) || 0;
+      const b = Number($("loopEnd").value) || 0;
+
+      if (state.drag === "A") {
+        t = Math.min(t, Math.max(0, b - 0.05));
+        $("loopStart").value = t.toFixed(2);
+      } else {
+        t = Math.max(t, a + 0.05);
+        $("loopEnd").value = t.toFixed(2);
+      }
+      updateLoop();
+      if (state.isPlaying) {
+        state.offsetAtStart = currentPosition();
+        state.startedAt = Tone.now();
+      }
+    });
+
+    canvas.addEventListener("pointerup", () => state.drag = null);
+    canvas.addEventListener("pointercancel", () => state.drag = null);
+
+    window.addEventListener("resize", resizeCanvas);
+
+    document.addEventListener("keydown", e => {
+      if (!state.player || ["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) return;
+
+      if (e.code === "Space") {
+        e.preventDefault();
+        $("playBtn").click();
+      }
+      if (e.key.toLowerCase() === "a") {
+        $("loopStart").value = currentPosition().toFixed(2);
+        updateLoop();
+      }
+      if (e.key.toLowerCase() === "b") {
+        $("loopEnd").value = currentPosition().toFixed(2);
+        updateLoop();
+      }
+      if (e.key.toLowerCase() === "l") {
+        $("loopToggle").click();
+      }
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        playFrom(currentPosition() - 2);
+      }
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        playFrom(currentPosition() + 2);
+      }
+    });
+
+    resizeCanvas();
+    enableControls(false);
   </script>
 </body>
 </html>
