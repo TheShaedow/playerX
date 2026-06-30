@@ -1,0 +1,539 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Audio Player – Speed, Pitch & A–B Loop</title>
+  <script src="https://unpkg.com/tone@14.8.49/build/Tone.js"></script>
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #131a2e;
+      --panel-2: #19233d;
+      --text: #f6f7fb;
+      --muted: #aeb7d0;
+      --line: rgba(255,255,255,.12);
+      --accent: #7dd3fc;
+      --danger: #fb7185;
+      --ok: #86efac;
+      --shadow: 0 18px 55px rgba(0,0,0,.35);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(125,211,252,.20), transparent 38rem),
+        radial-gradient(circle at bottom right, rgba(192,132,252,.14), transparent 34rem),
+        var(--bg);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: clamp(16px, 3vw, 40px);
+    }
+
+    .app {
+      width: min(980px, 100%);
+      background: rgba(19, 26, 46, .86);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      overflow: hidden;
+      backdrop-filter: blur(16px);
+    }
+
+    header {
+      padding: clamp(20px, 4vw, 34px);
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(135deg, rgba(125,211,252,.10), rgba(255,255,255,.03));
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.5rem, 4vw, 2.4rem);
+      letter-spacing: -.04em;
+    }
+
+    .subtitle {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+      max-width: 68ch;
+    }
+
+    main {
+      padding: clamp(18px, 4vw, 34px);
+      display: grid;
+      gap: 18px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    @media (max-width: 760px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: rgba(25, 35, 61, .8);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 18px;
+    }
+
+    label {
+      display: block;
+      color: var(--muted);
+      font-size: .93rem;
+      margin-bottom: 8px;
+    }
+
+    input[type="url"],
+    input[type="text"],
+    input[type="number"] {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: rgba(0,0,0,.20);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 12px 13px;
+      outline: none;
+      font: inherit;
+    }
+
+    input[type="file"] {
+      width: 100%;
+      color: var(--muted);
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 12px 16px;
+      color: #06111f;
+      background: var(--accent);
+      font-weight: 750;
+      cursor: pointer;
+      transition: transform .12s ease, opacity .12s ease;
+    }
+
+    button.secondary {
+      color: var(--text);
+      background: rgba(255,255,255,.10);
+      border: 1px solid var(--line);
+    }
+
+    button.danger {
+      color: #fff;
+      background: var(--danger);
+    }
+
+    button:disabled {
+      opacity: .45;
+      cursor: not-allowed;
+    }
+
+    button:not(:disabled):active {
+      transform: translateY(1px) scale(.99);
+    }
+
+    .transport {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+
+    .time {
+      font-variant-numeric: tabular-nums;
+      color: var(--muted);
+      min-width: 150px;
+      text-align: right;
+    }
+
+    .progress {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .control {
+      display: grid;
+      gap: 8px;
+      margin: 12px 0;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      accent-color: var(--accent);
+    }
+
+    .value {
+      color: var(--text);
+      font-weight: 700;
+    }
+
+    .loop-fields {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+    }
+
+    .status {
+      color: var(--muted);
+      line-height: 1.45;
+      min-height: 1.4em;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.08);
+      color: var(--muted);
+      font-size: .86rem;
+    }
+
+    .ok { color: var(--ok); }
+    .muted { color: var(--muted); }
+    code {
+      background: rgba(255,255,255,.08);
+      padding: .12rem .35rem;
+      border-radius: .4rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1 id="title">Audio Player</h1>
+      <p class="subtitle">
+        Responsiver Player für GitHub Pages: Audio per URL-Parameter, Upload oder Direktlink laden,
+        Geschwindigkeit ändern, Tonhöhe verschieben und A–B-Loop für Teilbereiche setzen.
+      </p>
+    </header>
+
+    <main>
+      <section class="card">
+        <label for="audioUrl">Audio-URL</label>
+        <div class="row">
+          <input id="audioUrl" type="url" placeholder="https://example.com/audio.mp3" />
+          <button id="loadUrlBtn">Laden</button>
+        </div>
+        <p class="status">
+          Linkformat: <code>?audio=https%3A%2F%2Fexample.com%2Ffile.mp3&title=Mein%20Audio</code>
+        </p>
+        <label>Oder Audio direkt im Browser laden</label>
+        <div class="row">
+          <button id="loadFileBtn" type="button">Load Audio</button>
+          <span id="fileName" class="muted">Keine Datei ausgewählt</span>
+        </div>
+        <input id="fileInput" type="file" accept="audio/*" hidden />
+      </section>
+
+      <section class="card">
+        <div class="transport">
+          <div class="row">
+            <button id="playBtn" disabled>Play</button>
+            <button id="stopBtn" class="secondary" disabled>Stop</button>
+            <button id="backBtn" class="secondary" disabled>−5s</button>
+            <button id="forwardBtn" class="secondary" disabled>+5s</button>
+          </div>
+          <div class="time"><span id="pos">0:00</span> / <span id="dur">0:00</span></div>
+        </div>
+        <input id="seek" class="progress" type="range" min="0" max="0" step="0.01" value="0" disabled />
+        <p id="status" class="status">Noch keine Audiodatei geladen.</p>
+      </section>
+
+      <section class="grid">
+        <div class="card">
+          <div class="control">
+            <label for="speed">Geschwindigkeit: <span id="speedVal" class="value">1.00×</span></label>
+            <input id="speed" type="range" min="0.25" max="3" step="0.01" value="1" />
+          </div>
+          <div class="control">
+            <label for="pitch">Tonhöhe: <span id="pitchVal" class="value">0 st</span></label>
+            <input id="pitch" type="range" min="-12" max="12" step="1" value="0" />
+          </div>
+          <p class="status">
+            Tonhöhe wird in Halbtönen verschoben. Speed bleibt separat steuerbar.
+          </p>
+        </div>
+
+        <div class="card">
+          <div class="row" style="justify-content: space-between;">
+            <span class="pill">A–B Loop</span>
+            <button id="loopToggle" class="secondary" disabled>Loop aus</button>
+          </div>
+          <div class="loop-fields">
+            <div>
+              <label for="loopStart">Start A, Sekunden</label>
+              <input id="loopStart" type="number" min="0" step="0.01" value="0" />
+            </div>
+            <div>
+              <label for="loopEnd">Ende B, Sekunden</label>
+              <input id="loopEnd" type="number" min="0" step="0.01" value="0" />
+            </div>
+          </div>
+          <div class="row" style="margin-top: 12px;">
+            <button id="setA" class="secondary" disabled>A = jetzt</button>
+            <button id="setB" class="secondary" disabled>B = jetzt</button>
+            <button id="clearLoop" class="danger" disabled>Reset</button>
+          </div>
+          <p id="loopInfo" class="status">Loop-Bereich noch nicht gesetzt.</p>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      player: null,
+      pitchShift: null,
+      sourceUrl: "",
+      duration: 0,
+      startedAt: 0,
+      offsetAtStart: 0,
+      isPlaying: false,
+      raf: null,
+      loopEnabled: false
+    };
+
+    const controls = [
+      "playBtn", "stopBtn", "backBtn", "forwardBtn", "seek",
+      "loopToggle", "setA", "setB", "clearLoop"
+    ].map($);
+
+    function fmt(seconds) {
+      seconds = Math.max(0, Number(seconds) || 0);
+      const m = Math.floor(seconds / 60);
+      const s = Math.floor(seconds % 60).toString().padStart(2, "0");
+      return `${m}:${s}`;
+    }
+
+    function setStatus(text, ok = false) {
+      $("status").innerHTML = ok ? `<span class="ok">${text}</span>` : text;
+    }
+
+    function enableControls(enabled) {
+      controls.forEach(el => el.disabled = !enabled);
+    }
+
+    function currentPosition() {
+      if (!state.isPlaying) return state.offsetAtStart;
+      return state.offsetAtStart + (Tone.now() - state.startedAt) * Number($("speed").value);
+    }
+
+    function setTransportUI(pos) {
+      $("pos").textContent = fmt(pos);
+      $("dur").textContent = fmt(state.duration);
+      $("seek").value = Math.min(pos, state.duration || 0);
+    }
+
+    function updateLoop() {
+      if (!state.player) return;
+      const a = Number($("loopStart").value) || 0;
+      const b = Number($("loopEnd").value) || 0;
+      const valid = b > a && b <= state.duration;
+
+      state.player.loop = state.loopEnabled && valid;
+      if (valid) {
+        state.player.loopStart = a;
+        state.player.loopEnd = b;
+        $("loopInfo").textContent = `Loop-Bereich: ${fmt(a)} bis ${fmt(b)}`;
+      } else {
+        state.player.loop = false;
+        $("loopInfo").textContent = "Loop-Bereich ungültig oder noch nicht gesetzt.";
+      }
+    }
+
+    function applyFX() {
+      if (!state.player || !state.pitchShift) return;
+      state.player.playbackRate = Number($("speed").value);
+      state.pitchShift.pitch = Number($("pitch").value);
+      $("speedVal").textContent = `${Number($("speed").value).toFixed(2)}×`;
+      $("pitchVal").textContent = `${$("pitch").value} st`;
+    }
+
+    async function stopPlayback(reset = false) {
+      if (state.player) {
+        try { state.player.stop(); } catch (e) {}
+      }
+      state.isPlaying = false;
+      cancelAnimationFrame(state.raf);
+      if (reset) state.offsetAtStart = 0;
+      setTransportUI(state.offsetAtStart);
+      $("playBtn").textContent = "Play";
+    }
+
+    async function playFrom(offset) {
+      if (!state.player) return;
+      await Tone.start();
+      await stopPlayback(false);
+
+      offset = Math.max(0, Math.min(offset, state.duration));
+      const a = Number($("loopStart").value) || 0;
+      const b = Number($("loopEnd").value) || 0;
+      if (state.loopEnabled && b > a && (offset < a || offset >= b)) offset = a;
+
+      applyFX();
+      updateLoop();
+
+      state.offsetAtStart = offset;
+      state.startedAt = Tone.now();
+      state.player.start(undefined, offset);
+      state.isPlaying = true;
+      $("playBtn").textContent = "Pause";
+      tick();
+    }
+
+    function tick() {
+      const pos = currentPosition();
+
+      if (!state.player) return;
+      if (!state.loopEnabled && pos >= state.duration) {
+        stopPlayback(true);
+        return;
+      }
+
+      setTransportUI(pos);
+      state.raf = requestAnimationFrame(tick);
+    }
+
+    async function loadAudio(url, label = "") {
+      await stopPlayback(true);
+      enableControls(false);
+      setStatus("Audio wird geladen …");
+
+      if (state.player) {
+        state.player.dispose();
+        state.pitchShift.dispose();
+      }
+
+      state.pitchShift = new Tone.PitchShift({ pitch: Number($("pitch").value), windowSize: 0.08 }).toDestination();
+      state.player = new Tone.Player({
+        url,
+        autostart: false,
+        onload: () => {
+          state.duration = state.player.buffer.duration;
+          state.sourceUrl = url;
+          $("seek").max = state.duration;
+          $("loopEnd").value = state.duration.toFixed(2);
+          $("title").textContent = label || new URLSearchParams(location.search).get("title") || "Audio Player";
+          setTransportUI(0);
+          enableControls(true);
+          applyFX();
+          updateLoop();
+          setStatus("Audio geladen. Bereit zum Abspielen.", true);
+        },
+        onerror: () => {
+          setStatus("Audio konnte nicht geladen werden. Prüfe HTTPS, CORS und die Datei-URL.");
+          enableControls(false);
+        }
+      }).connect(state.pitchShift);
+    }
+
+    $("loadUrlBtn").addEventListener("click", () => {
+      const url = $("audioUrl").value.trim();
+      if (url) loadAudio(url);
+    });
+
+    $("loadFileBtn").addEventListener("click", () => {
+      $("fileInput").click();
+    });
+
+    $("fileInput").addEventListener("change", (event) => {
+      const file = event.target.files[0];
+      if (!file) return;
+      $("fileName").textContent = file.name;
+      const url = URL.createObjectURL(file);
+      loadAudio(url, file.name);
+    });
+
+    $("playBtn").addEventListener("click", async () => {
+      if (state.isPlaying) {
+        const pos = currentPosition();
+        await stopPlayback(false);
+        state.offsetAtStart = pos;
+      } else {
+        playFrom(state.offsetAtStart);
+      }
+    });
+
+    $("stopBtn").addEventListener("click", () => stopPlayback(true));
+
+    $("backBtn").addEventListener("click", () => playFrom(currentPosition() - 5));
+    $("forwardBtn").addEventListener("click", () => playFrom(currentPosition() + 5));
+
+    $("seek").addEventListener("input", async () => {
+      const pos = Number($("seek").value);
+      state.offsetAtStart = pos;
+      setTransportUI(pos);
+      if (state.isPlaying) await playFrom(pos);
+    });
+
+    $("speed").addEventListener("input", () => {
+      const pos = currentPosition();
+      state.offsetAtStart = pos;
+      state.startedAt = Tone.now();
+      applyFX();
+    });
+
+    $("pitch").addEventListener("input", applyFX);
+
+    $("loopStart").addEventListener("input", updateLoop);
+    $("loopEnd").addEventListener("input", updateLoop);
+
+    $("setA").addEventListener("click", () => {
+      $("loopStart").value = currentPosition().toFixed(2);
+      updateLoop();
+    });
+
+    $("setB").addEventListener("click", () => {
+      $("loopEnd").value = currentPosition().toFixed(2);
+      updateLoop();
+    });
+
+    $("clearLoop").addEventListener("click", () => {
+      state.loopEnabled = false;
+      $("loopStart").value = "0";
+      $("loopEnd").value = state.duration.toFixed(2);
+      $("loopToggle").textContent = "Loop aus";
+      updateLoop();
+    });
+
+    $("loopToggle").addEventListener("click", () => {
+      state.loopEnabled = !state.loopEnabled;
+      $("loopToggle").textContent = state.loopEnabled ? "Loop an" : "Loop aus";
+      updateLoop();
+      if (state.isPlaying) playFrom(currentPosition());
+    });
+
+    const params = new URLSearchParams(location.search);
+    const audioParam = params.get("audio");
+    const titleParam = params.get("title");
+    if (titleParam) $("title").textContent = titleParam;
+    if (audioParam) {
+      $("audioUrl").value = audioParam;
+      loadAudio(audioParam, titleParam || "");
+    }
+  </script>
+</body>
+</html>
