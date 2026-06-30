@@ -287,7 +287,11 @@
             <label for="pitch">Tonhöhe: <span id="pitchVal" class="value">0 st</span></label>
             <input id="pitch" type="range" min="-12" max="12" step="1" value="0" />
           </div>
-          <p class="status">Pitch wird in Halbtönen verschoben, unabhängig vom Speed.</p>
+          <div class="control">
+            <label for="pitchQuality">Pitch-Qualität: <span id="pitchQualityVal" class="value">Clean</span></label>
+            <input id="pitchQuality" type="range" min="0" max="2" step="1" value="1" />
+          </div>
+          <p class="status">„Clean“ und „Smooth“ klingen beim Downpitch stabiler. „Fast“ reagiert direkter, kann aber verstimmen.</p>
         </div>
 
         <div class="card">
@@ -371,7 +375,8 @@
         b: Number($("loopEnd").value) || 0,
         loop: state.loopEnabled,
         speed: Number($("speed").value),
-        pitch: Number($("pitch").value)
+        pitch: Number($("pitch").value),
+        pitchQuality: Number($("pitchQuality").value)
       }));
     }
 
@@ -386,6 +391,8 @@
         state.loopEnabled = !!data.loop;
         $("speed").value = data.speed || 1;
         $("pitch").value = data.pitch || 0;
+        $("pitchQuality").value = data.pitchQuality ?? 1;
+        updatePitchQualityLabel();
         return true;
       } catch { return false; }
     }
@@ -543,11 +550,51 @@
       draw();
     }
 
+
+    function pitchWindowSize() {
+      const quality = Number($("pitchQuality").value);
+      if (quality === 0) return 0.08;   // Fast: low latency, more artifacts
+      if (quality === 1) return 0.22;   // Clean: better default for downpitch
+      return 0.38;                      // Smooth: most stable, more latency
+    }
+
+    function updatePitchQualityLabel() {
+      const quality = Number($("pitchQuality").value);
+      $("pitchQualityVal").textContent = quality === 0 ? "Fast" : quality === 1 ? "Clean" : "Smooth";
+    }
+
+    function rebuildPitchShift() {
+      if (!state.player || !state.pitchShift) return;
+      const wasPlaying = state.isPlaying;
+      const pos = currentPosition();
+
+      try { state.player.disconnect(); } catch (e) {}
+      try { state.pitchShift.dispose(); } catch (e) {}
+
+      state.pitchShift = new Tone.PitchShift({
+        pitch: Number($("pitch").value),
+        pitchQuality: Number($("pitchQuality").value),
+        windowSize: pitchWindowSize(),
+        feedback: 0,
+        delayTime: 0
+      }).toDestination();
+
+      state.player.connect(state.pitchShift);
+      updatePitchQualityLabel();
+
+      if (wasPlaying) playFrom(pos);
+      else {
+        state.offsetAtStart = pos;
+        updateTransportUI(pos);
+      }
+    }
+
     function applyFX() {
       if (state.player) state.player.playbackRate = Number($("speed").value);
       if (state.pitchShift) state.pitchShift.pitch = Number($("pitch").value);
       $("speedVal").textContent = `${Number($("speed").value).toFixed(2)}×`;
       $("pitchVal").textContent = `${$("pitch").value} st`;
+      updatePitchQualityLabel();
       saveLoop();
     }
 
@@ -639,7 +686,13 @@
       state.viewStart = 0;
 
       const url = URL.createObjectURL(file);
-      state.pitchShift = new Tone.PitchShift({ pitch: Number($("pitch").value), windowSize: 0.08 }).toDestination();
+      state.pitchShift = new Tone.PitchShift({
+        pitch: Number($("pitch").value),
+        pitchQuality: Number($("pitchQuality").value),
+        windowSize: pitchWindowSize(),
+        feedback: 0,
+        delayTime: 0
+      }).toDestination();
       state.player = new Tone.Player({
         url,
         autostart: false,
@@ -694,6 +747,8 @@
     });
 
     $("pitch").addEventListener("input", applyFX);
+
+    $("pitchQuality").addEventListener("input", rebuildPitchShift);
 
     $("loopStart").addEventListener("input", updateLoop);
     $("loopEnd").addEventListener("input", updateLoop);
@@ -805,6 +860,7 @@
       }
     });
 
+    updatePitchQualityLabel();
     resizeCanvas();
     enableControls(false);
   </script>
