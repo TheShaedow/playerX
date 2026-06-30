@@ -336,9 +336,26 @@
       controls.forEach(el => el.disabled = !enabled);
     }
 
+    function loopBounds() {
+      const a = Number($("loopStart").value) || 0;
+      const b = Number($("loopEnd").value) || 0;
+      const valid = state.loopEnabled && b > a && b <= state.duration;
+      return { a, b, valid, length: Math.max(0, b - a) };
+    }
+
+    function wrapIntoLoopPosition(pos) {
+      const loop = loopBounds();
+      if (!loop.valid || loop.length <= 0) return pos;
+
+      if (pos < loop.a) return loop.a;
+      const wrapped = ((pos - loop.a) % loop.length + loop.length) % loop.length;
+      return loop.a + wrapped;
+    }
+
     function currentPosition() {
-      if (!state.isPlaying) return state.offsetAtStart;
-      return state.offsetAtStart + (Tone.now() - state.startedAt) * Number($("speed").value);
+      if (!state.isPlaying) return wrapIntoLoopPosition(state.offsetAtStart);
+      const raw = state.offsetAtStart + (Tone.now() - state.startedAt) * Number($("speed").value);
+      return wrapIntoLoopPosition(raw);
     }
 
     function setTransportUI(pos) {
@@ -405,15 +422,18 @@
     }
 
     function tick() {
-      const pos = currentPosition();
-
       if (!state.player) return;
-      if (!state.loopEnabled && pos >= state.duration) {
+
+      const rawPos = state.isPlaying
+        ? state.offsetAtStart + (Tone.now() - state.startedAt) * Number($("speed").value)
+        : state.offsetAtStart;
+
+      if (!state.loopEnabled && rawPos >= state.duration) {
         stopPlayback(true);
         return;
       }
 
-      setTransportUI(pos);
+      setTransportUI(wrapIntoLoopPosition(rawPos));
       state.raf = requestAnimationFrame(tick);
     }
 
@@ -494,6 +514,7 @@
       state.offsetAtStart = pos;
       state.startedAt = Tone.now();
       applyFX();
+      setTransportUI(pos);
     });
 
     $("pitch").addEventListener("input", applyFX);
