@@ -332,6 +332,7 @@
       audioBuffer: null,
       startedAt: 0,
       offsetAtStart: 0,
+      playbackRate: 1,
       isPlaying: false,
       loopEnabled: false,
       raf: null,
@@ -414,7 +415,7 @@
 
     function currentPosition() {
       if (!state.isPlaying) return wrapIntoLoopPosition(state.offsetAtStart);
-      const raw = state.offsetAtStart + (Tone.now() - state.startedAt) * Number($("speed").value);
+      const raw = state.offsetAtStart + (Tone.now() - state.startedAt) * state.playbackRate;
       return wrapIntoLoopPosition(raw);
     }
 
@@ -563,6 +564,14 @@
       $("pitchQualityVal").textContent = quality === 0 ? "Fast" : quality === 1 ? "Clean" : "Smooth";
     }
 
+    // Tone.Player changes speed and pitch together, like a tape machine.
+    // Counteract that pitch change so the selected pitch stays constant.
+    function effectivePitch() {
+      const speed = Math.max(0.01, Number($("speed").value) || 1);
+      const selectedPitch = Number($("pitch").value) || 0;
+      return selectedPitch - 12 * Math.log2(speed);
+    }
+
     function rebuildPitchShift() {
       if (!state.player || !state.pitchShift) return;
       const wasPlaying = state.isPlaying;
@@ -572,7 +581,7 @@
       try { state.pitchShift.dispose(); } catch (e) {}
 
       state.pitchShift = new Tone.PitchShift({
-        pitch: Number($("pitch").value),
+        pitch: effectivePitch(),
         pitchQuality: Number($("pitchQuality").value),
         windowSize: pitchWindowSize(),
         feedback: 0,
@@ -590,8 +599,10 @@
     }
 
     function applyFX() {
-      if (state.player) state.player.playbackRate = Number($("speed").value);
-      if (state.pitchShift) state.pitchShift.pitch = Number($("pitch").value);
+      const speed = Number($("speed").value);
+      if (state.player) state.player.playbackRate = speed;
+      if (state.pitchShift) state.pitchShift.pitch = effectivePitch();
+      state.playbackRate = speed;
       $("speedVal").textContent = `${Number($("speed").value).toFixed(2)}×`;
       $("pitchVal").textContent = `${$("pitch").value} st`;
       updatePitchQualityLabel();
@@ -648,7 +659,7 @@
 
     function tick() {
       if (!state.player) return;
-      const raw = state.offsetAtStart + (Tone.now() - state.startedAt) * Number($("speed").value);
+      const raw = state.offsetAtStart + (Tone.now() - state.startedAt) * state.playbackRate;
       if (!state.loopEnabled && raw >= state.duration) {
         stopPlayback(true);
         return;
@@ -687,7 +698,7 @@
 
       const url = URL.createObjectURL(file);
       state.pitchShift = new Tone.PitchShift({
-        pitch: Number($("pitch").value),
+        pitch: effectivePitch(),
         pitchQuality: Number($("pitchQuality").value),
         windowSize: pitchWindowSize(),
         feedback: 0,
